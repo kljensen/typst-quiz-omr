@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__sequential-thinking__sequentialthinking",
+      "Read(//Users/klj39/src/github.com/kljensen/exam-maker/**)",
+      "mcp__kagi__kagi_search_fetch",
+      "mcp__go-dev-mcp__get_github_content",
+      "mcp__go-dev-mcp__tree_github_repo",
+      "WebFetch(domain:pyimagesearch.com)",
+      "Bash(typst compile:*)",
+      "Bash(uv init:*)",
+      "Bash(uv add:*)",
+      "Bash(uv run:*)",
+      "mcp__github__create_repository",
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(git rm:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
