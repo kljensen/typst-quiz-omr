@@ -103,7 +103,7 @@
     }
     parbreak()
     date
-    v(1cm)
+    v(0.5cm)
 
     // Instructions
     [== Instructions]
@@ -123,8 +123,6 @@
     ]
     }
 
-      v(1cm)
-    columns(2,
     // Answer bubbles
     context {
       set align(left)
@@ -197,14 +195,7 @@
           #image("markers/aruco_3.png", width: 12pt)
         ]
       ]
-      
-      colbreak()
-      box[
-        == Handwritten SQL Query
-      ]
-      v(0.25cm)
-    } 
-    )
+    }
   }
   pagebreak()
 
