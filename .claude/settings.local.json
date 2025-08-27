@@ -24,7 +24,8 @@
       "Bash(magick:*)",
       "Bash(done)",
       "Bash(git reset:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Read(//Users/klj39/src/github.com/kljensen/exam-maker/**)"
     ],
     "deny": [],
     "ask": []
