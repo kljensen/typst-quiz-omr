@@ -32,7 +32,8 @@
       "Bash(rm:*)",
       "WebFetch(domain:chev.me)",
       "WebFetch(domain:typst.app)",
-      "Bash(git log:*)"
+      "Bash(git log:*)",
+      "Read(/Users/klj39/src/github.com/kljensen/exam-maker/**)"
     ],
     "deny": [],
     "ask": []

@@ -6,6 +6,7 @@ import numpy as np
 from pathlib import Path
 import subprocess
 import sys
+import math
 from dataclasses import dataclass
 from typing import List, Tuple, Optional, Dict
 import argparse
@@ -56,6 +57,48 @@ def pdf_to_image(pdf_path: Path, dpi: int = 300) -> np.ndarray:
     
     output_path.unlink()
     return img
+
+def rotate_scan(img: np.ndarray) -> Tuple[np.ndarray, float]:
+    """
+    Detect and correct rotation using Hough line detection.
+    Technique from exam-maker for handling skewed scans.
+    Returns rotated image and angle of rotation.
+    """
+    gray = img if len(img.shape) == 2 else cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    h, w = gray.shape[:2]
+    
+    # Use top portion for rotation detection (less affected by content)
+    top_region = gray[0:h//5, 0:w]
+    edges = cv2.Canny(top_region, 50, 150)
+    
+    # Detect lines
+    lines = cv2.HoughLinesP(edges, rho=1, theta=np.pi/180, threshold=50,
+                           minLineLength=w//3, maxLineGap=w//25)
+    
+    if lines is None:
+        return img, 0.0
+    
+    # Calculate angles
+    angles = []
+    for line in lines:
+        for x1, y1, x2, y2 in line:
+            angle = math.degrees(math.atan2(y2 - y1, x2 - x1))
+            # Normalize to small rotations
+            if -45 <= angle <= 45:
+                angles.append(angle)
+    
+    if not angles or abs(np.median(angles)) < 0.5:
+        return img, 0.0
+    
+    # Rotate image
+    median_angle = np.median(angles)
+    center = (w // 2, h // 2)
+    rotation_matrix = cv2.getRotationMatrix2D(center, median_angle, 1.0)
+    rotated = cv2.warpAffine(img, rotation_matrix, (w, h),
+                            borderMode=cv2.BORDER_CONSTANT,
+                            borderValue=(255, 255, 255))
+    
+    return rotated, median_angle
 
 def detect_aruco_markers(image: np.ndarray) -> List[MarkerInfo]:
     """Detect ArUco markers in an image."""
@@ -109,6 +152,13 @@ def extract_region(image: np.ndarray, marker1: MarkerInfo, marker2: MarkerInfo,
     
     return region
 
+def adaptive_threshold(img: np.ndarray, blur: bool = True) -> np.ndarray:
+    """Apply adaptive threshold with OTSU - technique from exam-maker."""
+    if blur:
+        img = cv2.GaussianBlur(img, (5, 5), 1)
+    _, thresh = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    return thresh
+
 def detect_bubbles(bubble_region: np.ndarray, num_questions: int = None, 
                   options: str = "ABCD") -> List[BubbleInfo]:
     """Detect and analyze answer bubbles in the bubble region."""
@@ -117,9 +167,8 @@ def detect_bubbles(bubble_region: np.ndarray, num_questions: int = None,
     # Debug: save gray image
     cv2.imwrite("debug_gray.png", gray)
     
-    # Use threshold to find dark areas (bubbles are outlined)
-    # Adjusted threshold for better bubble outline detection
-    _, thresh = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY_INV)
+    # Use adaptive threshold with OTSU for better bubble detection
+    thresh = cv2.bitwise_not(adaptive_threshold(gray))
     cv2.imwrite("debug_thresh.png", thresh)
     
     # Find contours
@@ -213,6 +262,11 @@ def detect_answers(image_path: Path, visualize: bool = False) -> OMRResult:
         image = cv2.imread(str(image_path))
         if image is None:
             raise RuntimeError(f"Could not read image: {image_path}")
+    
+    # Rotation correction for scanned documents
+    image, rotation_angle = rotate_scan(image)
+    if rotation_angle != 0:
+        print(f"Corrected rotation by {rotation_angle:.2f} degrees")
     
     # Detect ArUco markers
     markers = detect_aruco_markers(image)
