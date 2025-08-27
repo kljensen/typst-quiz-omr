@@ -84,17 +84,18 @@
     set page(
       margin: 1.5in,
     )
-    set page(header: [
-      #set align(right)
-      // Place ArUco markers around NetID field
-      #grid(
-        columns: (12pt, 1fr, 12pt),
-        column-gutter: 5pt,
+    set page(header: {
+      set align(right)
+      // Place ArUco markers closely around NetID field
+      grid(
+        columns: (auto, auto, auto),
+        column-gutter: 10pt,
+        align: horizon,
         image("markers/aruco_0.png", width: 12pt),
         overline(offset: -1.5em)[~~ \u{2191} Your Yale netid \u{2191} ~~],
         image("markers/aruco_1.png", width: 12pt)
       )
-    ])
+    })
     set align(center)
     text(17pt, title)
     if date == none {

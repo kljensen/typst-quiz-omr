@@ -29,7 +29,10 @@
       "Bash(python:*)",
       "Bash(open example_filled_quiz.pdf)",
       "Bash(git checkout:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "WebFetch(domain:chev.me)",
+      "WebFetch(domain:typst.app)",
+      "Bash(git log:*)"
     ],
     "deny": [],
     "ask": []
