@@ -23,7 +23,8 @@
       "Bash(do echo -n \"$f: \")",
       "Bash(magick:*)",
       "Bash(done)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []
