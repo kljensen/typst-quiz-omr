@@ -25,7 +25,8 @@
       "Bash(done)",
       "Bash(git reset:*)",
       "Bash(git push:*)",
-      "Read(//Users/klj39/src/github.com/kljensen/exam-maker/**)"
+      "Read(//Users/klj39/src/github.com/kljensen/exam-maker/**)",
+      "Bash(python:*)"
     ],
     "deny": [],
     "ask": []

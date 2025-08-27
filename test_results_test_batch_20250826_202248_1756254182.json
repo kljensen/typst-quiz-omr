@@ -1,0 +1,551 @@
+{
+  "batch_id": "20250826_202248",
+  "num_tests": 5,
+  "test_results": [
+    {
+      "success": true,
+      "accuracy": 10.0,
+      "correct": 1,
+      "total": 10,
+      "processing_time": 0.23160505294799805,
+      "details": [
+        {
+          "question": 1,
+          "expected": [
+            "A",
+            "B",
+            "E"
+          ],
+          "detected": "None",
+          "correct": false
+        },
+        {
+          "question": 2,
+          "expected": [
+            "E"
+          ],
+          "detected": "A",
+          "correct": false
+        },
+        {
+          "question": 3,
+          "expected": [
+            "A"
+          ],
+          "detected": "None",
+          "correct": false
+        },
+        {
+          "question": 4,
+          "expected": [
+            "E"
+          ],
+          "detected": "None",
+          "correct": false
+        },
+        {
+          "question": 5,
+          "expected": [],
+          "detected": "None",
+          "correct": true
+        },
+        {
+          "question": 6,
+          "expected": [
+            "E"
+          ],
+          "detected": "None",
+          "correct": false
+        },
+        {
+          "question": 7,
+          "expected": [
+            "C"
+          ],
+          "detected": "None",
+          "correct": false
+        },
+        {
+          "question": 8,
+          "expected": [
+            "C",
+            "D"
+          ],
+          "detected": "None",
+          "correct": false
+        },
+        {
+          "question": 9,
+          "expected": [
+            "C"
+          ],
+          "detected": "None",
+          "correct": false
+        },
+        {
+          "question": 10,
+          "expected": [
+            "C"
+          ],
+          "detected": "None",
+          "correct": false
+        }
+      ],
+      "test_id": "20250826_202248_001",
+      "pattern_stats": {
+        "total_questions": 10,
+        "blank_questions": 1,
+        "multi_select_questions": 2,
+        "single_select_questions": 7,
+        "option_distribution": {
+          "A": 2,
+          "B": 1,
+          "E": 4,
+          "C": 4,
+          "D": 1
+        },
+        "max_consecutive_same": 3
+      }
+    },
+    {
+      "success": true,
+      "accuracy": 20.0,
+      "correct": 2,
+      "total": 10,
+      "processing_time": 0.2130579948425293,
+      "details": [
+        {
+          "question": 1,
+          "expected": [],
+          "detected": "None",
+          "correct": true
+        },
+        {
+          "question": 2,
+          "expected": [
+            "A",
+            "B",
+            "C"
+          ],
+          "detected": "A",
+          "correct": true
+        },
+        {
+          "question": 3,
+          "expected": [
+            "E"
+          ],
+          "detected": "None",
+          "correct": false
+        },
+        {
+          "question": 4,
+          "expected": [
+            "E"
+          ],
+          "detected": "None",
+          "correct": false
+        },
+        {
+          "question": 5,
+          "expected": [
+            "D"
+          ],
+          "detected": "None",
+          "correct": false
+        },
+        {
+          "question": 6,
+          "expected": [
+            "A"
+          ],
+          "detected": "None",
+          "correct": false
+        },
+        {
+          "question": 7,
+          "expected": [
+            "B",
+            "C",
+            "D"
+          ],
+          "detected": "None",
+          "correct": false
+        },
+        {
+          "question": 8,
+          "expected": [
+            "B"
+          ],
+          "detected": "None",
+          "correct": false
+        },
+        {
+          "question": 9,
+          "expected": [
+            "A",
+            "B"
+          ],
+          "detected": "None",
+          "correct": false
+        },
+        {
+          "question": 10,
+          "expected": [
+            "A"
+          ],
+          "detected": "None",
+          "correct": false
+        }
+      ],
+      "test_id": "20250826_202248_002",
+      "pattern_stats": {
+        "total_questions": 10,
+        "blank_questions": 1,
+        "multi_select_questions": 3,
+        "single_select_questions": 6,
+        "option_distribution": {
+          "A": 4,
+          "B": 4,
+          "C": 2,
+          "E": 2,
+          "D": 2
+        },
+        "max_consecutive_same": 2
+      }
+    },
+    {
+      "success": true,
+      "accuracy": 10.0,
+      "correct": 1,
+      "total": 10,
+      "processing_time": 0.21175599098205566,
+      "details": [
+        {
+          "question": 1,
+          "expected": [
+            "A"
+          ],
+          "detected": "None",
+          "correct": false
+        },
+        {
+          "question": 2,
+          "expected": [
+            "A"
+          ],
+          "detected": "A",
+          "correct": true
+        },
+        {
+          "question": 3,
+          "expected": [
+            "A"
+          ],
+          "detected": "None",
+          "correct": false
+        },
+        {
+          "question": 4,
+          "expected": [
+            "C"
+          ],
+          "detected": "None",
+          "correct": false
+        },
+        {
+          "question": 5,
+          "expected": [
+            "D"
+          ],
+          "detected": "None",
+          "correct": false
+        },
+        {
+          "question": 6,
+          "expected": [
+            "C"
+          ],
+          "detected": "None",
+          "correct": false
+        },
+        {
+          "question": 7,
+          "expected": [
+            "E"
+          ],
+          "detected": "None",
+          "correct": false
+        },
+        {
+          "question": 8,
+          "expected": [
+            "E"
+          ],
+          "detected": "None",
+          "correct": false
+        },
+        {
+          "question": 9,
+          "expected": [
+            "A"
+          ],
+          "detected": "None",
+          "correct": false
+        },
+        {
+          "question": 10,
+          "expected": [
+            "C"
+          ],
+          "detected": "None",
+          "correct": false
+        }
+      ],
+      "test_id": "20250826_202248_003",
+      "pattern_stats": {
+        "total_questions": 10,
+        "blank_questions": 0,
+        "multi_select_questions": 0,
+        "single_select_questions": 10,
+        "option_distribution": {
+          "A": 4,
+          "C": 3,
+          "D": 1,
+          "E": 2
+        },
+        "max_consecutive_same": 3
+      }
+    },
+    {
+      "success": true,
+      "accuracy": 10.0,
+      "correct": 1,
+      "total": 10,
+      "processing_time": 0.21192288398742676,
+      "details": [
+        {
+          "question": 1,
+          "expected": [
+            "A"
+          ],
+          "detected": "None",
+          "correct": false
+        },
+        {
+          "question": 2,
+          "expected": [
+            "A",
+            "B",
+            "E"
+          ],
+          "detected": "A",
+          "correct": true
+        },
+        {
+          "question": 3,
+          "expected": [
+            "A"
+          ],
+          "detected": "None",
+          "correct": false
+        },
+        {
+          "question": 4,
+          "expected": [
+            "B",
+            "C",
+            "E"
+          ],
+          "detected": "None",
+          "correct": false
+        },
+        {
+          "question": 5,
+          "expected": [
+            "B"
+          ],
+          "detected": "None",
+          "correct": false
+        },
+        {
+          "question": 6,
+          "expected": [
+            "B"
+          ],
+          "detected": "None",
+          "correct": false
+        },
+        {
+          "question": 7,
+          "expected": [
+            "C"
+          ],
+          "detected": "None",
+          "correct": false
+        },
+        {
+          "question": 8,
+          "expected": [
+            "C",
+            "D",
+            "E"
+          ],
+          "detected": "None",
+          "correct": false
+        },
+        {
+          "question": 9,
+          "expected": [
+            "E"
+          ],
+          "detected": "None",
+          "correct": false
+        },
+        {
+          "question": 10,
+          "expected": [
+            "C"
+          ],
+          "detected": "None",
+          "correct": false
+        }
+      ],
+      "test_id": "20250826_202248_004",
+      "pattern_stats": {
+        "total_questions": 10,
+        "blank_questions": 0,
+        "multi_select_questions": 3,
+        "single_select_questions": 7,
+        "option_distribution": {
+          "A": 3,
+          "B": 4,
+          "E": 4,
+          "C": 4,
+          "D": 1
+        },
+        "max_consecutive_same": 2
+      }
+    },
+    {
+      "success": true,
+      "accuracy": 10.0,
+      "correct": 1,
+      "total": 10,
+      "processing_time": 0.2128610610961914,
+      "details": [
+        {
+          "question": 1,
+          "expected": [
+            "E"
+          ],
+          "detected": "None",
+          "correct": false
+        },
+        {
+          "question": 2,
+          "expected": [
+            "E"
+          ],
+          "detected": "A",
+          "correct": false
+        },
+        {
+          "question": 3,
+          "expected": [
+            "A"
+          ],
+          "detected": "None",
+          "correct": false
+        },
+        {
+          "question": 4,
+          "expected": [],
+          "detected": "None",
+          "correct": true
+        },
+        {
+          "question": 5,
+          "expected": [
+            "A"
+          ],
+          "detected": "None",
+          "correct": false
+        },
+        {
+          "question": 6,
+          "expected": [
+            "C",
+            "D",
+            "E"
+          ],
+          "detected": "None",
+          "correct": false
+        },
+        {
+          "question": 7,
+          "expected": [
+            "B",
+            "C",
+            "D"
+          ],
+          "detected": "None",
+          "correct": false
+        },
+        {
+          "question": 8,
+          "expected": [
+            "B",
+            "D"
+          ],
+          "detected": "None",
+          "correct": false
+        },
+        {
+          "question": 9,
+          "expected": [
+            "C"
+          ],
+          "detected": "None",
+          "correct": false
+        },
+        {
+          "question": 10,
+          "expected": [
+            "A"
+          ],
+          "detected": "None",
+          "correct": false
+        }
+      ],
+      "test_id": "20250826_202248_005",
+      "pattern_stats": {
+        "total_questions": 10,
+        "blank_questions": 1,
+        "multi_select_questions": 3,
+        "single_select_questions": 6,
+        "option_distribution": {
+          "E": 3,
+          "A": 3,
+          "C": 3,
+          "D": 3,
+          "B": 2
+        },
+        "max_consecutive_same": 2
+      }
+    }
+  ],
+  "summary": {
+    "num_successful": 5,
+    "num_failed": 0,
+    "mean_accuracy": 12.0,
+    "std_accuracy": 4.0,
+    "min_accuracy": 10.0,
+    "max_accuracy": 20.0,
+    "median_accuracy": 10.0,
+    "tests_above_70": 0,
+    "tests_above_80": 0,
+    "tests_above_90": 0,
+    "mean_processing_time": 0.21624059677124025
+  }
+}

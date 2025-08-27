@@ -35,13 +35,13 @@ class BubbleGrid:
 class TypstOptimizedDetector:
     """Detector optimized for Typst quiz format"""
     
-    def __init__(self, fill_threshold: float = 0.20, verbose: bool = False):
+    def __init__(self, fill_threshold: float = 0.30, verbose: bool = False):
         self.fill_threshold = fill_threshold
         self.verbose = verbose
         # Typst-specific parameters based on observation
-        self.expected_bubble_radius = 13  # Approximate radius in pixels at 300 DPI
-        self.expected_row_spacing = 60    # Approximate spacing between question rows
-        self.expected_col_spacing = 50    # Approximate spacing between option columns
+        self.expected_bubble_radius = 16  # Based on actual measurements (14-19 range)
+        self.expected_row_spacing = 35    # Measured spacing between question rows
+        self.expected_col_spacing = 35    # Measured spacing between option columns
     
     def preprocess_for_bubbles(self, img: np.ndarray) -> np.ndarray:
         """
@@ -80,7 +80,28 @@ class TypstOptimizedDetector:
         else:
             gray = img.copy()
         
-        # Preprocess for bubble detection
+        # Try Hough circles first for Typst (works better on clean printed circles)
+        circles = cv2.HoughCircles(
+            gray,
+            cv2.HOUGH_GRADIENT,
+            dp=1.0,
+            minDist=25,
+            param1=100,  # Canny high threshold
+            param2=15,   # Accumulator threshold
+            minRadius=8,
+            maxRadius=25
+        )
+        
+        if circles is not None and len(circles[0]) > 10:
+            circles = np.round(circles[0, :]).astype("int")
+            for x, y, r in circles:
+                bubbles.append(Bubble(center=(x, y), radius=float(r)))
+            
+            if self.verbose:
+                logger.info(f"Hough circles found {len(bubbles)} bubbles")
+            return bubbles
+        
+        # Fall back to contour detection if Hough fails
         preprocessed = self.preprocess_for_bubbles(gray)
         
         # Find contours
@@ -97,9 +118,9 @@ class TypstOptimizedDetector:
             # Expected area for bubble (pi * r^2)
             expected_area = np.pi * (self.expected_bubble_radius ** 2)
             
-            # Allow 40% variance in area
-            min_area = expected_area * 0.6
-            max_area = expected_area * 1.4
+            # Allow 50% variance in area for Typst variations
+            min_area = expected_area * 0.5
+            max_area = expected_area * 1.5
             
             if min_area < area < max_area:
                 # Check circularity
@@ -112,36 +133,15 @@ class TypstOptimizedDetector:
                         # Get center and radius
                         (x, y), radius = cv2.minEnclosingCircle(contour)
                         
-                        # Additional radius check
-                        if abs(radius - self.expected_bubble_radius) < 5:
+                        # Additional radius check - allow wider range for Typst
+                        if 10 < radius < 20:
                             bubbles.append(Bubble(
                                 center=(int(x), int(y)),
                                 radius=radius
                             ))
         
-        # If contour method fails, try Hough with specific parameters
-        if len(bubbles) < 10:
-            logger.info("Contour method found few bubbles, trying Hough circles")
-            
-            # Very specific Hough parameters for Typst bubbles
-            circles = cv2.HoughCircles(
-                gray,
-                cv2.HOUGH_GRADIENT,
-                dp=1.2,
-                minDist=30,  # Bubbles are well-spaced
-                param1=50,
-                param2=25,
-                minRadius=10,
-                maxRadius=16
-            )
-            
-            if circles is not None:
-                circles = np.round(circles[0, :]).astype("int")
-                for x, y, r in circles:
-                    # Check if this circle is in a reasonable location
-                    # (not too close to edges, which might be brackets)
-                    if 50 < x < img.shape[1] - 50 and 50 < y < img.shape[0] - 50:
-                        bubbles.append(Bubble(center=(x, y), radius=r))
+        if self.verbose:
+            logger.info(f"Contour method found {len(bubbles)} bubbles")
         
         return bubbles
     
@@ -186,18 +186,19 @@ class TypstOptimizedDetector:
         # Sort by Y coordinate
         bubbles_sorted = sorted(bubbles, key=lambda b: b.center[1])
         
-        # Use expected row spacing for clustering
+        # Cluster rows using adaptive threshold
         rows = []
         current_row = [bubbles_sorted[0]]
-        current_y = bubbles_sorted[0].center[1]
         
         for bubble in bubbles_sorted[1:]:
-            # Check if this bubble is in a new row
-            if bubble.center[1] - current_y > self.expected_row_spacing * 0.5:
-                # New row
+            # Calculate Y difference from last bubble in current row
+            y_diff = bubble.center[1] - current_row[-1].center[1]
+            
+            # New row if Y difference is significant
+            if y_diff > self.expected_row_spacing * 0.7:
+                # Sort current row by X before adding
                 rows.append(sorted(current_row, key=lambda b: b.center[0]))
                 current_row = [bubble]
-                current_y = bubble.center[1]
             else:
                 current_row.append(bubble)
         
@@ -246,22 +247,28 @@ class TypstOptimizedDetector:
         else:
             gray = img.copy()
         
-        # Invert image (bubbles should be dark)
-        inverted = cv2.bitwise_not(gray)
+        # Apply adaptive threshold for better fill detection
+        adaptive = cv2.adaptiveThreshold(
+            gray, 255,
+            cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+            cv2.THRESH_BINARY,
+            blockSize=31,
+            C=10
+        )
         
         for row_idx, row in enumerate(grid.bubbles):
             max_fill_ratio = 0
             best_col = None
             
             for bubble in row:
-                # Create slightly smaller mask to avoid edges
-                mask = np.zeros(inverted.shape, dtype=np.uint8)
-                cv2.circle(mask, bubble.center, int(bubble.radius * 0.7), 255, -1)
+                # Create mask for bubble interior (smaller to avoid edge artifacts)
+                mask = np.zeros(adaptive.shape, dtype=np.uint8)
+                cv2.circle(mask, bubble.center, int(bubble.radius * 0.8), 255, -1)
                 
-                # Measure darkness in bubble
-                masked = cv2.bitwise_and(inverted, mask)
-                total_pixels = cv2.countNonZero(mask)
-                dark_pixels = cv2.countNonZero(masked)
+                # Count dark pixels in bubble (adaptive threshold makes filled=0, empty=255)
+                masked_region = adaptive[mask > 0]
+                total_pixels = len(masked_region)
+                dark_pixels = np.sum(masked_region == 0)  # Dark pixels are 0 in binary
                 
                 fill_ratio = dark_pixels / total_pixels if total_pixels > 0 else 0
                 bubble.fill_ratio = fill_ratio
