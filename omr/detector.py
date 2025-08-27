@@ -79,6 +79,16 @@ class DynamicOMRDetector:
     
     def find_bubble_region(self, img: np.ndarray) -> Optional[Tuple[int, int, int, int]]:
         """Find region bounded by corner brackets"""
+        # Try bracket_detector_v2 which works
+        try:
+            from omr.bracket_detector_v2 import find_bubble_region_v2
+            region = find_bubble_region_v2(img)
+            if region:
+                return region
+        except ImportError:
+            pass
+        
+        # Fallback to original method
         corners = self.detect_corner_brackets(img)
         
         if len(corners) == 4:

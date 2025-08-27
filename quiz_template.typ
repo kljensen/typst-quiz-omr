@@ -150,8 +150,8 @@
       }
       
       // Add corner brackets around the bubble grid for OMR detection
-      let bracket_size = 12pt
-      let bracket_thickness = 2pt + black
+      let bracket_size = 20pt  // Increased from 12pt
+      let bracket_thickness = 4pt + black  // Increased from 2pt
       let grid_content = grid(
         columns: 2,
         align: (right, center),
