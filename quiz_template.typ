@@ -4,6 +4,7 @@
   date: none,
   options: "ABCDE",
   text_size: 10pt,
+  show_filled: false,  // Set to true to visually fill marked bubbles (for testing)
   doc,
 ) = {
 
@@ -82,11 +83,17 @@
   {
     set page(
       margin: 1.5in,
-
     )
     set page(header: [
       #set align(right)
-      #overline(offset: -1.5em)[~~ \u{2191} Your Yale netid \u{2191} ~~]
+      // Place ArUco markers around NetID field
+      #grid(
+        columns: (12pt, 1fr, 12pt),
+        column-gutter: 5pt,
+        image("markers/aruco_0.png", width: 12pt),
+        overline(offset: -1.5em)[~~ \u{2191} Your Yale netid \u{2191} ~~],
+        image("markers/aruco_1.png", width: 12pt)
+      )
     ])
     set align(center)
     text(17pt, title)
@@ -125,19 +132,12 @@
       ]
       v(0.25cm)
 
-      let row_of_bubbles = options.clusters().map(c => {
-        [#box(circle(inset: 1pt)[
-          #set align(center)
-          #set text(size: 6pt)
-          #c
-        ])]
-      }).join(" ")
-
       let elements = ()
       let qn = 1
       let num_questions = question_number.final().first()
+      let answers = correct_answers.final()
+      
       while qn < num_questions + 1 {
-
         // Write the question number. We
         // shift this to align with bubbles.
         let label = block[
@@ -145,56 +145,58 @@
           #qn.
         ]
         elements.push(label)
+        
+        // Generate bubbles for this question
+        let filled_options = if show_filled and answers.len() >= qn { 
+          answers.at(qn - 1) 
+        } else { 
+          () 
+        }
+        let row_of_bubbles = options.clusters().enumerate().map(((i, c)) => {
+          let is_filled = show_filled and i in filled_options
+          if is_filled {
+            // Filled bubble - dark circle (only when show_filled is true)
+            [#box(circle(fill: black, inset: 1pt)[
+              #set align(center)
+              #set text(size: 6pt, fill: white)
+              #c
+            ])]
+          } else {
+            // Empty bubble (default)
+            [#box(circle(inset: 1pt)[
+              #set align(center)
+              #set text(size: 6pt)
+              #c
+            ])]
+          }
+        }).join(" ")
+        
         elements.push(row_of_bubbles)
         qn += 1
       }
       
-      // Add corner brackets around the bubble grid for OMR detection
-      let bracket_size = 20pt  // Increased from 12pt
-      let bracket_thickness = 4pt + black  // Increased from 2pt
-      let grid_content = grid(
-        columns: 2,
-        align: (right, center),
-        gutter: .75em,
-        ..elements
-      )
-      
-      // Wrap grid with brackets positioned at corners
-      box(width: 100%)[
-        #place(
-          top + left,
-          dx: -5pt, dy: -5pt,
-          {
-            line(start: (bracket_size, 0pt), end: (0pt, 0pt), stroke: bracket_thickness)
-            line(start: (0pt, 0pt), end: (0pt, bracket_size), stroke: bracket_thickness)
-          }
+      // Wrap the bubble grid in a box so we can place markers relative to it
+      box[
+        // Place ArUco markers at diagonal corners of bubble grid
+        // Top-left marker
+        #place(top + left, dx: -15pt, dy: -15pt)[
+          #image("markers/aruco_2.png", width: 12pt)
+        ]
+        
+        // The actual bubble grid
+        #grid(
+          columns: 2,
+          align: (right, center),
+          gutter: .75em,
+          ..elements
         )
-        #place(
-          top + right,
-          dx: 5pt, dy: -5pt,
-          {
-            line(start: (-bracket_size, 0pt), end: (0pt, 0pt), stroke: bracket_thickness)
-            line(start: (0pt, 0pt), end: (0pt, bracket_size), stroke: bracket_thickness)
-          }
-        )
-        #place(
-          bottom + left,
-          dx: -5pt, dy: 5pt,
-          {
-            line(start: (0pt, -bracket_size), end: (0pt, 0pt), stroke: bracket_thickness)
-            line(start: (0pt, 0pt), end: (bracket_size, 0pt), stroke: bracket_thickness)
-          }
-        )
-        #place(
-          bottom + right,
-          dx: 5pt, dy: 5pt,
-          {
-            line(start: (0pt, -bracket_size), end: (0pt, 0pt), stroke: bracket_thickness)
-            line(start: (0pt, 0pt), end: (-bracket_size, 0pt), stroke: bracket_thickness)
-          }
-        )
-        #grid_content
+        
+        // Bottom-right marker (placed after grid to know its size)
+        #place(bottom + right, dx: 15pt, dy: 15pt)[
+          #image("markers/aruco_3.png", width: 12pt)
+        ]
       ]
+      
       colbreak()
       box[
         == Handwritten SQL Query
