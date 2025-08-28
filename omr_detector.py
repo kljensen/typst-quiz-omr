@@ -271,15 +271,34 @@ def detect_bubbles(bubble_region: np.ndarray, num_questions: int = None,
             if current_row:
                 right_rows.append(sorted(current_row, key=lambda c: c[0]))
             
-            # Combine rows - left column first, then right column
-            all_rows = left_rows + right_rows
-            
-            # Process all rows with correct question numbering
-            for question_num, row in enumerate(all_rows, 1):
+            # Process left column (questions 1 to N/2)
+            for row_idx, row in enumerate(left_rows):
+                question_num = row_idx + 1
                 for option_num, circle in enumerate(row):
                     if option_num < len(options):
                         x, y, r = circle
-                        # Existing bubble processing code continues...
+                        mask = np.zeros(gray.shape, dtype="uint8")
+                        cv2.circle(mask, (x, y), int(r * 0.7), 255, -1)
+                        bubble_roi = gray[mask == 255]
+                        mean_val = np.mean(bubble_roi) if len(bubble_roi) > 0 else 255
+                        fill_ratio = (255 - mean_val) / 255
+                        is_filled = mean_val < 150
+                        
+                        bubbles.append(BubbleInfo(
+                            question=question_num,
+                            option=options[option_num],
+                            center=(x, y),
+                            filled=is_filled,
+                            fill_ratio=fill_ratio
+                        ))
+            
+            # Process right column (questions N/2+1 to N)
+            left_count = len(left_rows)
+            for row_idx, row in enumerate(right_rows):
+                question_num = left_count + row_idx + 1
+                for option_num, circle in enumerate(row):
+                    if option_num < len(options):
+                        x, y, r = circle
                         mask = np.zeros(gray.shape, dtype="uint8")
                         cv2.circle(mask, (x, y), int(r * 0.7), 255, -1)
                         bubble_roi = gray[mask == 255]
