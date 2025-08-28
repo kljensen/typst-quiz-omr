@@ -375,7 +375,7 @@
     "errors": []
   },
   {
-    "passed": false,
+    "passed": true,
     "num_questions": 10,
     "expected": {
       "1": [
@@ -442,15 +442,13 @@
         "B"
       ],
       "10": [
-        "A"
+        "D"
       ]
     },
-    "errors": [
-      "Q10: expected ['D'], got ['A']"
-    ]
+    "errors": []
   },
   {
-    "passed": false,
+    "passed": true,
     "num_questions": 11,
     "expected": {
       "1": [
@@ -528,19 +526,16 @@
         "A"
       ],
       "10": [
-        "A",
-        "B"
+        "A"
       ],
       "11": [
         "A"
       ]
     },
-    "errors": [
-      "Q10: expected ['A'], got ['A', 'B']"
-    ]
+    "errors": []
   },
   {
-    "passed": false,
+    "passed": true,
     "num_questions": 12,
     "expected": {
       "1": [
@@ -613,8 +608,7 @@
         "A"
       ],
       "10": [
-        "A",
-        "C"
+        "B"
       ],
       "11": [
         "C"
@@ -623,12 +617,10 @@
         "B"
       ]
     },
-    "errors": [
-      "Q10: expected ['B'], got ['A', 'C']"
-    ]
+    "errors": []
   },
   {
-    "passed": false,
+    "passed": true,
     "num_questions": 13,
     "expected": {
       "1": [
@@ -706,8 +698,7 @@
         "D"
       ],
       "10": [
-        "A",
-        "C"
+        "B"
       ],
       "11": [
         "C"
@@ -719,12 +710,10 @@
         "B"
       ]
     },
-    "errors": [
-      "Q10: expected ['B'], got ['A', 'C']"
-    ]
+    "errors": []
   },
   {
-    "passed": false,
+    "passed": true,
     "num_questions": 14,
     "expected": {
       "1": [
@@ -805,8 +794,7 @@
         "A"
       ],
       "10": [
-        "A",
-        "D"
+        "C"
       ],
       "11": [
         "A",
@@ -825,12 +813,10 @@
         "C"
       ]
     },
-    "errors": [
-      "Q10: expected ['C'], got ['A', 'D']"
-    ]
+    "errors": []
   },
   {
-    "passed": false,
+    "passed": true,
     "num_questions": 15,
     "expected": {
       "1": [
@@ -912,7 +898,7 @@
         "B"
       ],
       "10": [
-        "A",
+        "B",
         "C",
         "D"
       ],
@@ -932,12 +918,10 @@
         "C"
       ]
     },
-    "errors": [
-      "Q10: expected ['B', 'C', 'D'], got ['A', 'C', 'D']"
-    ]
+    "errors": []
   },
   {
-    "passed": false,
+    "passed": true,
     "num_questions": 16,
     "expected": {
       "1": [
@@ -1029,8 +1013,7 @@
         "C"
       ],
       "10": [
-        "A",
-        "B"
+        "A"
       ],
       "11": [
         "A"
@@ -1056,8 +1039,6 @@
         "C"
       ]
     },
-    "errors": [
-      "Q10: expected ['A'], got ['A', 'B']"
-    ]
+    "errors": []
   }
 ]

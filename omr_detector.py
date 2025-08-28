@@ -185,7 +185,151 @@ def detect_column_layout(circles_found: List[Tuple[int, int, int]]) -> Tuple[str
     
     return "single", None
 
-def detect_bubbles(bubble_region: np.ndarray, num_questions: int = None, 
+def detect_circles_liberal(image: np.ndarray) -> List[Tuple[int, int, int]]:
+    """Detect circles with liberal thresholds for first pass."""
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if len(image.shape) == 3 else image
+    
+    # Use adaptive threshold
+    thresh = cv2.bitwise_not(adaptive_threshold(gray))
+    
+    # Find contours
+    contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
+    circles = []
+    for contour in contours:
+        area = cv2.contourArea(contour)
+        if area < 50 or area > 3000:  # More liberal area bounds
+            continue
+            
+        perimeter = cv2.arcLength(contour, True)
+        if perimeter == 0:
+            continue
+        circularity = 4 * np.pi * area / (perimeter * perimeter)
+        
+        if circularity > 0.6:  # More liberal circularity
+            (x, y), radius = cv2.minEnclosingCircle(contour)
+            if 8 < radius < 50:  # More liberal radius range
+                circles.append((int(x), int(y), int(radius)))
+    
+    return circles
+
+@dataclass
+class GridStructure:
+    """Detected grid structure for bubbles."""
+    col_positions: List[float]
+    row_positions: List[float]
+    col_spacing: float
+    row_spacing: float
+    
+def detect_grid_structure(circles: List[Tuple[int, int, int]], 
+                         expected_cols: int = 5, force_cols: bool = True) -> Optional[GridStructure]:
+    """Detect grid structure from detected circles using clustering.
+    
+    Strategy: Over-cluster and take the top clusters by population.
+    This naturally filters out outliers like the '0' in '10'.
+    """
+    if len(circles) < expected_cols * 2:  # Need at least 2 rows
+        return None
+    
+    from sklearn.cluster import KMeans
+    import numpy as np
+    
+    # Extract X and Y coordinates
+    x_coords = np.array([c[0] for c in circles])
+    y_coords = np.array([c[1] for c in circles])
+    
+    # Use over-clustering approach: cluster into more groups than needed
+    # then select the top clusters by population
+    n_clusters_to_try = min(7, len(set(x_coords)))  # Try up to 7 clusters
+    
+    if n_clusters_to_try < expected_cols:
+        return None
+    
+    # Cluster X coordinates
+    kmeans_x = KMeans(n_clusters=n_clusters_to_try, random_state=42, n_init=10)
+    x_labels = kmeans_x.fit_predict(x_coords.reshape(-1, 1))
+    x_centers = kmeans_x.cluster_centers_.flatten()
+    
+    # Count population of each cluster
+    cluster_populations = []
+    for i in range(n_clusters_to_try):
+        pop = np.sum(x_labels == i)
+        cluster_populations.append((x_centers[i], pop, i))
+    
+    # Sort by population and take the top clusters
+    cluster_populations.sort(key=lambda x: x[1], reverse=True)
+    
+    # Debug: show cluster populations
+    # print(f"Cluster populations (x_pos, count): {[(round(c[0]), c[1]) for c in cluster_populations]}")
+    
+    # Take the top N clusters by population based on expected_cols
+    # The interference (like "0" from "10") should have lower population
+    # print(f"Cluster populations: {[(round(c[0]), c[1]) for c in cluster_populations]}")
+    
+    # Take exactly expected_cols clusters with highest population
+    best_cols = sorted([c[0] for c in cluster_populations[:expected_cols]])
+    
+    if len(best_cols) == 0:
+        return None
+    
+    # Find row clusters
+    # Estimate number of rows from total circles / columns
+    estimated_rows = max(3, len(circles) // len(best_cols))
+    
+    # Cluster Y coordinates
+    kmeans_y = KMeans(n_clusters=min(estimated_rows, len(y_coords)), 
+                      random_state=42, n_init=10)
+    kmeans_y.fit(y_coords.reshape(-1, 1))
+    row_positions = sorted(kmeans_y.cluster_centers_.flatten())
+    
+    # Clean up row positions - merge rows that are too close
+    cleaned_rows = []
+    min_row_gap = 30  # Minimum gap between rows
+    for row in row_positions:
+        if not cleaned_rows or (row - cleaned_rows[-1]) > min_row_gap:
+            cleaned_rows.append(row)
+        else:
+            # Merge with previous row (average position)
+            cleaned_rows[-1] = (cleaned_rows[-1] + row) / 2
+    
+    # Calculate median spacings
+    col_spacings = np.diff(best_cols)
+    row_spacings = np.diff(cleaned_rows)
+    
+    col_spacing = np.median(col_spacings) if len(col_spacings) > 0 else 50
+    row_spacing = np.median(row_spacings) if len(row_spacings) > 0 else 50
+    
+    return GridStructure(
+        col_positions=best_cols,
+        row_positions=cleaned_rows,
+        col_spacing=col_spacing,
+        row_spacing=row_spacing
+    )
+
+def create_bubble_mask(image_shape: tuple, grid: GridStructure, 
+                       margin: int = 20) -> np.ndarray:
+    """Create mask with circles at grid intersections."""
+    # Start with white image
+    mask = np.ones(image_shape[:2], dtype=np.uint8) * 255
+    
+    # Draw black circles at each grid intersection
+    for x_pos in grid.col_positions:
+        for y_pos in grid.row_positions:
+            cv2.circle(mask, (int(x_pos), int(y_pos)), margin, 0, -1)
+    
+    return mask
+
+def apply_mask_to_image(image: np.ndarray, mask: np.ndarray) -> np.ndarray:
+    """Apply mask to image, making masked areas white."""
+    result = image.copy()
+    # Where mask is white (255), make image white
+    if len(result.shape) == 3:
+        result[mask == 255] = [255, 255, 255]
+    else:
+        result[mask == 255] = 255
+    return result
+
+def detect_bubbles_old(bubble_region: np.ndarray, num_questions: int = None, 
                   options: str = "ABCD") -> List[BubbleInfo]:
     """Detect and analyze answer bubbles in the bubble region."""
     gray = cv2.cvtColor(bubble_region, cv2.COLOR_BGR2GRAY)
@@ -370,6 +514,196 @@ def detect_bubbles(bubble_region: np.ndarray, num_questions: int = None,
     
     return bubbles
 
+def detect_bubbles(bubble_region: np.ndarray, num_questions: int = None,
+                  options: str = "ABCDE", debug: bool = False) -> List[BubbleInfo]:
+    """Two-pass bubble detection with grid-based filtering.
+    
+    Approach:
+    1. Detect all circles liberally
+    2. Use circles to determine layout (1 or 2 columns)
+    3. Process each column separately with over-clustering
+    4. Clean and re-detect for final results
+    """
+    # Step 1: Liberal detection to find all potential bubbles
+    circles = detect_circles_liberal(bubble_region)
+    
+    if debug:
+        debug_img = bubble_region.copy()
+        for x, y, r in circles:
+            cv2.circle(debug_img, (x, y), r, (0, 255, 0), 2)
+        cv2.imwrite("debug_pass1_circles.png", debug_img)
+        print(f"Pass 1: Found {len(circles)} circles")
+    
+    # Step 2: Detect layout using the circles
+    x_sorted = sorted([c[0] for c in circles])
+    gaps = []
+    for i in range(1, len(x_sorted)):
+        gap = x_sorted[i] - x_sorted[i-1]
+        if gap > 200:  # Large gap indicating column separation
+            gaps.append((gap, (x_sorted[i-1] + x_sorted[i]) / 2))
+    
+    is_two_column = len(gaps) > 0
+    
+    if debug:
+        print(f"Layout: {'Two-column' if is_two_column else 'Single column'}")
+        if is_two_column:
+            print(f"Column gap at x={gaps[0][1]}")
+    
+    bubbles = []
+    gray = cv2.cvtColor(bubble_region, cv2.COLOR_BGR2GRAY) if len(bubble_region.shape) == 3 else bubble_region
+    
+    if is_two_column:
+        # Step 3: Process two-column layout
+        split_x = gaps[0][1]
+        left_circles = [c for c in circles if c[0] < split_x]
+        right_circles = [c for c in circles if c[0] >= split_x]
+        
+        # Process left column with simplified grid detection
+        left_grid = detect_grid_structure(left_circles, expected_cols=len(options))
+        if left_grid:
+            if debug:
+                print(f"Left grid: {len(left_grid.col_positions)} cols, {len(left_grid.row_positions)} rows")
+            
+            # Create mask for left column
+            left_mask = create_bubble_mask(bubble_region.shape, left_grid, margin=25)
+            left_cleaned = apply_mask_to_image(bubble_region, left_mask)
+            left_final = detect_circles_liberal(left_cleaned)
+            
+            # Map left column circles to bubbles
+            for row_idx, y_pos in enumerate(left_grid.row_positions):
+                question_num = row_idx + 1
+                for col_idx, x_pos in enumerate(left_grid.col_positions):
+                    if col_idx >= len(options):
+                        continue
+                    
+                    # Find circle closest to this grid position
+                    best_circle = None
+                    min_dist = float('inf')
+                    
+                    for cx, cy, cr in left_final:
+                        dist = np.sqrt((cx - x_pos) ** 2 + (cy - y_pos) ** 2)
+                        if dist < min_dist and dist < 30:
+                            min_dist = dist
+                            best_circle = (cx, cy, cr)
+                    
+                    if best_circle:
+                        x, y, r = best_circle
+                        mask = np.zeros(gray.shape, dtype="uint8")
+                        cv2.circle(mask, (x, y), int(r * 0.7), 255, -1)
+                        bubble_roi = gray[mask == 255]
+                        mean_val = np.mean(bubble_roi) if len(bubble_roi) > 0 else 255
+                        fill_ratio = (255 - mean_val) / 255
+                        is_filled = mean_val < 150
+                        
+                        bubbles.append(BubbleInfo(
+                            question=question_num,
+                            option=options[col_idx],
+                            center=(x, y),
+                            filled=is_filled,
+                            fill_ratio=fill_ratio
+                        ))
+        
+        # Process right column
+        right_grid = detect_grid_structure(right_circles, expected_cols=len(options))
+        if right_grid:
+            if debug:
+                print(f"Right grid: {len(right_grid.col_positions)} cols, {len(right_grid.row_positions)} rows")
+            
+            # Create mask for right column
+            right_mask = create_bubble_mask(bubble_region.shape, right_grid, margin=25)
+            right_cleaned = apply_mask_to_image(bubble_region, right_mask)
+            right_final = detect_circles_liberal(right_cleaned)
+            
+            # Map right column circles to bubbles
+            left_questions = len(left_grid.row_positions) if left_grid else 0
+            for row_idx, y_pos in enumerate(right_grid.row_positions):
+                question_num = left_questions + row_idx + 1
+                for col_idx, x_pos in enumerate(right_grid.col_positions):
+                    if col_idx >= len(options):
+                        continue
+                    
+                    # Find circle closest to this grid position
+                    best_circle = None
+                    min_dist = float('inf')
+                    
+                    for cx, cy, cr in right_final:
+                        dist = np.sqrt((cx - x_pos) ** 2 + (cy - y_pos) ** 2)
+                        if dist < min_dist and dist < 30:
+                            min_dist = dist
+                            best_circle = (cx, cy, cr)
+                    
+                    if best_circle:
+                        x, y, r = best_circle
+                        mask = np.zeros(gray.shape, dtype="uint8")
+                        cv2.circle(mask, (x, y), int(r * 0.7), 255, -1)
+                        bubble_roi = gray[mask == 255]
+                        mean_val = np.mean(bubble_roi) if len(bubble_roi) > 0 else 255
+                        fill_ratio = (255 - mean_val) / 255
+                        is_filled = mean_val < 150
+                        
+                        bubbles.append(BubbleInfo(
+                            question=question_num,
+                            option=options[col_idx],
+                            center=(x, y),
+                            filled=is_filled,
+                            fill_ratio=fill_ratio
+                        ))
+    else:
+        # Single column layout - use original logic
+        grid = detect_grid_structure(circles, expected_cols=len(options))
+        if grid is None:
+            print("Warning: Could not detect grid structure, falling back to old method")
+            return detect_bubbles_old(bubble_region, num_questions, options[:4])
+        
+        if debug:
+            print(f"Grid: {len(grid.col_positions)} cols, {len(grid.row_positions)} rows")
+        
+        mask = create_bubble_mask(bubble_region.shape, grid, margin=25)
+        cleaned_image = apply_mask_to_image(bubble_region, mask)
+        
+        if debug:
+            cv2.imwrite("debug_mask.png", mask)
+            cv2.imwrite("debug_cleaned.png", cleaned_image)
+        
+        final_circles = detect_circles_liberal(cleaned_image)
+        
+        if debug:
+            print(f"Pass 2: Found {len(final_circles)} circles after cleaning")
+        
+        for row_idx, y_pos in enumerate(grid.row_positions):
+            question_num = row_idx + 1
+            for col_idx, x_pos in enumerate(grid.col_positions):
+                if col_idx >= len(options):
+                    continue
+                
+                best_circle = None
+                min_dist = float('inf')
+                
+                for cx, cy, cr in final_circles:
+                    dist = np.sqrt((cx - x_pos) ** 2 + (cy - y_pos) ** 2)
+                    if dist < min_dist and dist < 30:
+                        min_dist = dist
+                        best_circle = (cx, cy, cr)
+                
+                if best_circle:
+                    x, y, r = best_circle
+                    mask = np.zeros(gray.shape, dtype="uint8")
+                    cv2.circle(mask, (x, y), int(r * 0.7), 255, -1)
+                    bubble_roi = gray[mask == 255]
+                    mean_val = np.mean(bubble_roi) if len(bubble_roi) > 0 else 255
+                    fill_ratio = (255 - mean_val) / 255
+                    is_filled = mean_val < 150
+                    
+                    bubbles.append(BubbleInfo(
+                        question=question_num,
+                        option=options[col_idx],
+                        center=(x, y),
+                        filled=is_filled,
+                        fill_ratio=fill_ratio
+                    ))
+    
+    return bubbles
+
 def detect_answers(image_path: Path, visualize: bool = False) -> OMRResult:
     """Main OMR detection pipeline."""
     # Convert PDF to image if needed
@@ -404,7 +738,7 @@ def detect_answers(image_path: Path, visualize: bool = False) -> OMRResult:
     answers = {}
     
     if bubble_region is not None:
-        bubbles = detect_bubbles(bubble_region)
+        bubbles = detect_bubbles(bubble_region, debug=False)
         
         # Group answers by question
         for bubble in bubbles:
