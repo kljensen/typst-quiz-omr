@@ -131,19 +131,20 @@
       ]
       v(0.25cm)
 
-      let elements = ()
-      let qn = 1
       let num_questions = question_number.final().first()
       let answers = correct_answers.final()
       
+      // Generate all bubble elements
+      let all_elements = ()
+      let qn = 1
+      
       while qn < num_questions + 1 {
-        // Write the question number. We
-        // shift this to align with bubbles.
+        // Write the question number
         let label = block[
           #set text(baseline: 0.05em)
           #qn.
         ]
-        elements.push(label)
+        all_elements.push(label)
         
         // Generate bubbles for this question
         let filled_options = if show_filled and answers.len() >= qn { 
@@ -170,7 +171,7 @@
           }
         }).join(" ")
         
-        elements.push(row_of_bubbles)
+        all_elements.push(row_of_bubbles)
         qn += 1
       }
       
@@ -182,13 +183,42 @@
           #image("markers/aruco_2.png", width: 12pt)
         ]
         
-        // The actual bubble grid
-        #grid(
-          columns: 2,
-          align: (right, center),
-          gutter: .75em,
-          ..elements
-        )
+        // Create grid based on number of questions
+        #if num_questions > 8 {
+          // Two-column layout for >8 questions
+          let mid_point = calc.ceil(num_questions / 2)
+          let left_elements = all_elements.slice(0, mid_point * 2)
+          let right_elements = all_elements.slice(mid_point * 2)
+          
+          grid(
+            columns: (1fr, 1fr),
+            column-gutter: 2em,
+            
+            // Left column
+            grid(
+              columns: 2,
+              align: (right, center),
+              gutter: .75em,
+              ..left_elements
+            ),
+            
+            // Right column
+            grid(
+              columns: 2,
+              align: (right, center),
+              gutter: .75em,
+              ..right_elements
+            )
+          )
+        } else {
+          // Single column for ≤8 questions
+          grid(
+            columns: 2,
+            align: (right, center),
+            gutter: .75em,
+            ..all_elements
+          )
+        }
         
         // Bottom-right marker (placed after grid to know its size)
         #place(bottom + right, dx: 15pt, dy: 15pt)[

@@ -159,6 +159,32 @@ def adaptive_threshold(img: np.ndarray, blur: bool = True) -> np.ndarray:
     _, thresh = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     return thresh
 
+def detect_column_layout(circles_found: List[Tuple[int, int, int]]) -> Tuple[str, Optional[float]]:
+    """Detect if bubbles are in one or two columns by finding gaps in X coordinates."""
+    if not circles_found:
+        return "single", None
+    
+    # Get unique X coordinates (with some tolerance for alignment)
+    x_coords = sorted(set(c[0] for c in circles_found))
+    
+    # Find gaps between consecutive X positions
+    gaps = []
+    for i in range(1, len(x_coords)):
+        gap = x_coords[i] - x_coords[i-1]
+        if gap > 50:  # Significant gap
+            gaps.append((gap, (x_coords[i-1] + x_coords[i]) / 2))
+    
+    # Look for a large gap that would indicate column separation
+    # Typically the gap between columns is much larger than between bubbles
+    large_gaps = [g for g in gaps if g[0] > 100]
+    
+    if large_gaps:
+        # Find the largest gap - this is likely the column separator
+        largest_gap = max(large_gaps, key=lambda x: x[0])
+        return "double", largest_gap[1]
+    
+    return "single", None
+
 def detect_bubbles(bubble_region: np.ndarray, num_questions: int = None, 
                   options: str = "ABCD") -> List[BubbleInfo]:
     """Detect and analyze answer bubbles in the bubble region."""
@@ -193,63 +219,135 @@ def detect_bubbles(bubble_region: np.ndarray, num_questions: int = None,
             if 10 < radius < 40:  # Reasonable bubble size
                 circles_found.append((int(x), int(y), int(radius)))
     
-    print(f"Found {len(circles_found)} circular contours")
+    # print(f"Found {len(circles_found)} circular contours")
     
     bubbles = []
     if circles_found:
-        # Sort circles by y-coordinate (row), then x-coordinate (column)
-        sorted_circles = sorted(circles_found, key=lambda c: (c[1], c[0]))
+        # Detect if we have one or two columns
+        layout_type, split_x = detect_column_layout(circles_found)
+        # print(f"Detected layout: {layout_type}, split_x: {split_x}")
         
-        # Group circles into rows based on y-coordinate
-        rows = []
-        current_row = []
-        last_y = -1
-        row_threshold = 20  # Pixels difference to consider same row
-        
-        for circle in sorted_circles:
-            x, y, r = circle
-            if last_y == -1 or abs(y - last_y) < row_threshold:
-                current_row.append(circle)
-                last_y = y
-            else:
-                if current_row:
-                    rows.append(sorted(current_row, key=lambda c: c[0]))
-                current_row = [circle]
-                last_y = y
-        
-        if current_row:
-            rows.append(sorted(current_row, key=lambda c: c[0]))
-        
-        # Process each row
-        for question_num, row in enumerate(rows, 1):
-            for option_num, circle in enumerate(row):
-                if option_num < len(options):
-                    x, y, r = circle
-                    
-                    # Extract bubble region - smaller mask to focus on interior
-                    mask = np.zeros(gray.shape, dtype="uint8")
-                    cv2.circle(mask, (x, y), int(r * 0.7), 255, -1)  # Use 70% of radius to avoid edges
-                    
-                    # Calculate fill ratio by checking darkness inside bubble
-                    bubble_roi = gray[mask == 255]
-                    mean_val = np.mean(bubble_roi) if len(bubble_roi) > 0 else 255
-                    
-                    # Lower mean value = darker = filled
-                    # Empty bubbles should be mostly white (high values)
-                    # Filled bubbles will have darker pixels (lower values)
-                    fill_ratio = (255 - mean_val) / 255
-                    
-                    # Determine if bubble is filled (stricter threshold)
-                    # Typical empty bubble: ~240-255, Filled bubble: ~0-100
-                    is_filled = mean_val < 150  # Darker than this threshold = filled
-                    
-                    bubbles.append(BubbleInfo(
-                        question=question_num,
-                        option=options[option_num],
-                        center=(x, y),
-                        filled=is_filled,
-                        fill_ratio=fill_ratio
-                    ))
+        if layout_type == "double" and split_x:
+            # Two-column layout
+            left_circles = [c for c in circles_found if c[0] < split_x]
+            right_circles = [c for c in circles_found if c[0] >= split_x]
+            
+            # Process left column
+            left_sorted = sorted(left_circles, key=lambda c: (c[1], c[0]))
+            left_rows = []
+            current_row = []
+            last_y = -1
+            row_threshold = 20
+            
+            for circle in left_sorted:
+                x, y, r = circle
+                if last_y == -1 or abs(y - last_y) < row_threshold:
+                    current_row.append(circle)
+                    last_y = y
+                else:
+                    if current_row:
+                        left_rows.append(sorted(current_row, key=lambda c: c[0]))
+                    current_row = [circle]
+                    last_y = y
+            if current_row:
+                left_rows.append(sorted(current_row, key=lambda c: c[0]))
+            
+            # Process right column
+            right_sorted = sorted(right_circles, key=lambda c: (c[1], c[0]))
+            right_rows = []
+            current_row = []
+            last_y = -1
+            
+            for circle in right_sorted:
+                x, y, r = circle
+                if last_y == -1 or abs(y - last_y) < row_threshold:
+                    current_row.append(circle)
+                    last_y = y
+                else:
+                    if current_row:
+                        right_rows.append(sorted(current_row, key=lambda c: c[0]))
+                    current_row = [circle]
+                    last_y = y
+            if current_row:
+                right_rows.append(sorted(current_row, key=lambda c: c[0]))
+            
+            # Combine rows - left column first, then right column
+            all_rows = left_rows + right_rows
+            
+            # Process all rows with correct question numbering
+            for question_num, row in enumerate(all_rows, 1):
+                for option_num, circle in enumerate(row):
+                    if option_num < len(options):
+                        x, y, r = circle
+                        # Existing bubble processing code continues...
+                        mask = np.zeros(gray.shape, dtype="uint8")
+                        cv2.circle(mask, (x, y), int(r * 0.7), 255, -1)
+                        bubble_roi = gray[mask == 255]
+                        mean_val = np.mean(bubble_roi) if len(bubble_roi) > 0 else 255
+                        fill_ratio = (255 - mean_val) / 255
+                        is_filled = mean_val < 150
+                        
+                        bubbles.append(BubbleInfo(
+                            question=question_num,
+                            option=options[option_num],
+                            center=(x, y),
+                            filled=is_filled,
+                            fill_ratio=fill_ratio
+                        ))
+        else:
+            # Single column layout (existing logic)
+            sorted_circles = sorted(circles_found, key=lambda c: (c[1], c[0]))
+            
+            # Group circles into rows based on y-coordinate
+            rows = []
+            current_row = []
+            last_y = -1
+            row_threshold = 20
+            
+            for circle in sorted_circles:
+                x, y, r = circle
+                if last_y == -1 or abs(y - last_y) < row_threshold:
+                    current_row.append(circle)
+                    last_y = y
+                else:
+                    if current_row:
+                        rows.append(sorted(current_row, key=lambda c: c[0]))
+                    current_row = [circle]
+                    last_y = y
+            
+            if current_row:
+                rows.append(sorted(current_row, key=lambda c: c[0]))
+            
+            # Process each row
+            for question_num, row in enumerate(rows, 1):
+                for option_num, circle in enumerate(row):
+                    if option_num < len(options):
+                        x, y, r = circle
+                        
+                        # Extract bubble region - smaller mask to focus on interior
+                        mask = np.zeros(gray.shape, dtype="uint8")
+                        cv2.circle(mask, (x, y), int(r * 0.7), 255, -1)  # Use 70% of radius to avoid edges
+                        
+                        # Calculate fill ratio by checking darkness inside bubble
+                        bubble_roi = gray[mask == 255]
+                        mean_val = np.mean(bubble_roi) if len(bubble_roi) > 0 else 255
+                        
+                        # Lower mean value = darker = filled
+                        # Empty bubbles should be mostly white (high values)
+                        # Filled bubbles will have darker pixels (lower values)
+                        fill_ratio = (255 - mean_val) / 255
+                        
+                        # Determine if bubble is filled (stricter threshold)
+                        # Typical empty bubble: ~240-255, Filled bubble: ~0-100
+                        is_filled = mean_val < 150  # Darker than this threshold = filled
+                        
+                        bubbles.append(BubbleInfo(
+                            question=question_num,
+                            option=options[option_num],
+                            center=(x, y),
+                            filled=is_filled,
+                            fill_ratio=fill_ratio
+                        ))
     
     return bubbles
 
